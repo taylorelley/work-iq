@@ -41,10 +41,7 @@ The fastest way to get started is with GitHub Copilot CLI:
 # 1. Open GitHub Copilot CLI
 copilot
 
-# 2. Add the plugins marketplace (one-time setup)
-/plugin marketplace add github/copilot-plugins
-
-# 3. Install WorkIQ
+# 2. Install WorkIQ
 /plugin install workiq@copilot-plugins
 ```
 
