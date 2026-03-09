@@ -17,6 +17,33 @@ MCP servers expose tools that can be consumed by your agent. Unlike OpenAPI-base
 
 ---
 
+## Scaffold the Agent Project First
+
+Before adding an MCP plugin, you **must** have a scaffolded agent project. Run `atk new` if you haven't already:
+
+```bash
+npx -p @microsoft/m365agentstoolkit-cli@latest atk new \
+  -n my-agent \
+  -c declarative-agent \
+  -i false
+```
+
+This creates `m365agents.yml` (and `m365agents.local.yml`) with the **5 required lifecycle steps**:
+
+| Step | Lifecycle Action | What it does |
+|------|-----------------|--------------|
+| 1 | `teamsApp/create` | Registers the Teams app |
+| 2 | `teamsApp/zipAppPackage` | Packages manifest + icons into a zip |
+| 3 | `teamsApp/validateAppPackage` | Validates the package (icons, schema, etc.) |
+| 4 | `teamsApp/update` | Uploads the package to Teams |
+| 5 | `teamsApp/extendToM365` | **Extends the app to M365 Copilot** — generates `M365_TITLE_ID` |
+
+**What breaks without `extendToM365`:** If this step is missing, `atk provision` will register the Teams app and generate `TEAMS_APP_ID`, but the agent will **never appear in Copilot Chat** because no `M365_TITLE_ID` is generated. This is the most common reason for "provision succeeded but agent not found" failures.
+
+> **If you already have a project** but are missing `teamsApp/extendToM365`, add it to the `provision` lifecycle in `m365agents.yml` after `teamsApp/update`. See [deployment.md](deployment.md) for the full provisioning reference.
+
+---
+
 ## Step-by-Step Integration
 
 ### Step 1: Get MCP Server URL
@@ -193,6 +220,7 @@ Add the plugin to your `declarative-agent.json`:
 ## Complete Workflow Checklist
 
 ```
+□ Step 0: Scaffold agent project with `atk new` (if not already scaffolded)  ← MANDATORY
 □ Step 1: Get MCP server URL from user
 □ Step 2: Run MCP Inspector to discover tools                    ← MANDATORY
 □ Step 3: Create {name}-plugin.json with basic structure
