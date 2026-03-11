@@ -99,7 +99,8 @@ Create the required files:
 
 **`README.md`** — Plugin documentation with installation instructions, skill table, and usage examples.
 
-**`skills/<name>/SKILL.md`** — Skill definition with YAML frontmatter:
+**`skills/<name>/SKILL.md`** — Skill definition with YAML frontmatter.
+**The `description` field must not exceed 1024 characters** — the Copilot CLI runtime silently drops skills that exceed this limit.
 ```yaml
 ---
 name: my-skill

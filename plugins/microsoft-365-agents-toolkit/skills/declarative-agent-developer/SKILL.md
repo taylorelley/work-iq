@@ -4,13 +4,14 @@ description: >
   Create, build, and deploy declarative agents for M365 Copilot and Teams. Scaffolds new M365 agent
   projects, authors JSON manifests, configures capabilities, and manages the full agent lifecycle.
   Use when creating a new agent, building a Teams agent, or working on any M365 Copilot declarative agent.
-  Triggers: "create agent", "create a declarative agent", "create an agent", "new declarative agent",
+  Triggers: "create agent", "create a declarative agent", "new declarative agent",
   "create m365 agent", "create Teams agent", "build an agent", "build a declarative agent",
-  "scaffold an agent", "new agent project", "make a copilot agent", "start a new agent",
-  "create a copilot agent", "add a capability", "add a plugin", "configure my agent",
-  "deploy my agent", "provision my agent", "fix my agent manifest", "validate my agent",
-  "edit my agent", "modify my agent", "update my agent instructions", "add conversation starters",
-  "add a web search capability", "add graph connectors", "add an API plugin", "add an MCP plugin"
+  "scaffold an agent", "new agent project", "make a copilot agent", "create a copilot agent",
+  "add a capability", "add a plugin", "configure my agent", "deploy my agent",
+  "provision my agent", "fix my agent manifest", "validate my agent", "edit my agent",
+  "modify my agent", "update my agent instructions", "add conversation starters",
+  "add a web search capability", "add graph connectors", "add an API plugin", "add an MCP plugin",
+  "add OAuth to my plugin", "MCP authentication", "add logo to my agent"
 ---
 
 # M365 Agent Developer
@@ -82,6 +83,7 @@ When you encounter ANY problem (missing files, malformed JSON, validation errors
 | Working with existing `.json` manifests | [Editing Workflow](references/editing-workflow.md) |
 | Adding an API plugin | [API Plugins](references/api-plugins.md) |
 | Adding an MCP server | [MCP Plugin](references/mcp-plugin.md) |
+| Adding OAuth to an MCP or API plugin | [Authentication](references/authentication.md) |
 | Writing agent instructions | [Conversation Design](references/conversation-design.md) |
 
 ---
@@ -145,7 +147,7 @@ Run a **single** `atk add action` call per OpenAPI spec, listing **all** operati
 
 ### 5. MCP Server Integration
 
-When the user mentions an MCP server URL, follow the [MCP Plugin workflow](references/mcp-plugin.md). You MUST run the MCP Inspector to discover actual tools — **NEVER fabricate tool names/descriptions**.
+When the user mentions an MCP server URL, follow the [MCP Plugin workflow](references/mcp-plugin.md). You MUST discover tools via the MCP protocol handshake (initialize → notifications/initialized → tools/list) — **NEVER fabricate tool names/descriptions**. For authenticated MCP servers, follow the [authentication guide](references/authentication.md) to configure OAuth.
 
 ### 6. Always Update Instructions & Starters After Changes
 
@@ -163,6 +165,7 @@ Always update the app name and description to something meaningful. Never leave 
 ## References
 
 ### Shared
+- **[Authentication](references/authentication.md)** — OAuth discovery, credentials, oauth/register lifecycle, OAuthPluginVault
 - **[Best Practices](references/best-practices.md)** — Security, performance, testing, compliance
 - **[Conversation Design](references/conversation-design.md)** — Instructions and conversation starters
 - **[Deployment](references/deployment.md)** — ATK CLI workflows, environments, CI/CD
@@ -175,5 +178,5 @@ Always update the app name and description to something meaningful. Never leave 
 - **[Editing Workflow](references/editing-workflow.md)** — Step-by-step JSON development instructions
 - **[Schema](references/schema.md)** — Official JSON schema for agent manifests
 - **[API Plugins](references/api-plugins.md)** — OpenAPI integration for JSON agents
-- **[MCP Plugin](references/mcp-plugin.md)** — MCP server integration with RemoteMCPServer
+- **[MCP Plugin](references/mcp-plugin.md)** — MCP server integration with RemoteMCPServer, OAuth, response semantics, logo handling
 - **[Examples](references/examples.md)** — JSON manifest examples

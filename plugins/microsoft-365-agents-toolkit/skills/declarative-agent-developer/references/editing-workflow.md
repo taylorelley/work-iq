@@ -20,7 +20,7 @@ When developing an agent, you MUST ALWAYS update the app name and description in
 
 ## 🚨 CRITICAL DEPLOYMENT RULE 🚨
 
-When making ANY edits to an agent — including instructions, conversation starters, capabilities, plugins, or any file in `appPackage/` — you MUST ALWAYS validate and deploy using `atk provision --env local` before returning to the user. This applies to EVERY turn, not just the final turn. Never return to the user with undeployed changes.
+When making ANY edits to an agent — including instructions, conversation starters, capabilities, plugins, or any file in `appPackage/` — you MUST ALWAYS validate and deploy using `atk provision --env local --interactive false` before returning to the user. This applies to EVERY turn, not just the final turn. Never return to the user with undeployed changes.
 
 **You must NEVER:**
 - Skip deploy because "it's just instructions" — deploy after every change
@@ -52,8 +52,8 @@ atk validate --env local
 
 **Decision tree after running `atk validate --env local`:**
 1. **ERRORS found** → STOP. Fix all errors. Re-validate. DO NOT run `atk provision`.
-2. **Only WARNINGS** → Proceed to `atk provision --env local`.
-3. **Clean (no errors, no warnings)** → Proceed to `atk provision --env local`.
+2. **Only WARNINGS** → Proceed to `atk provision --env local --interactive false`.
+3. **Clean (no errors, no warnings)** → Proceed to `atk provision --env local --interactive false`.
 
 **What to check for:**
 - Schema validation errors (missing required fields, wrong types, invalid values)
@@ -132,7 +132,7 @@ atk validate --env local
 ```
 **After ALL edits + validations pass, immediately run:**
 ```bash
-atk provision --env local
+atk provision --env local --interactive false
 ```
 These two commands are part of the edit — not a separate optional step. If you edited `declarativeAgent.json`, you MUST run `atk validate --env local`. If you edited `instruction.txt`, you MUST run `atk validate --env local`. Then deploy. Editing without validating and deploying is like writing code without saving the file — the work is not done.
 
@@ -168,7 +168,7 @@ atk add action --api-plugin-type api-spec --openapi-spec-location <URL> --api-op
 **⛔ MANDATORY POST-EDIT CHECKPOINT — YOU ARE NOT DONE YET:**
 After editing ANY file in `appPackage/`, you MUST complete BOTH steps below before responding to the user. Skipping either one is an eval failure:
 1. **Validate** — Run `atk validate --env local` once (it validates the entire project). No other validation method is acceptable. If it reports errors → fix them and re-validate. Do NOT proceed to step 2 with errors.
-2. **Deploy** — Run `atk provision --env local`. If you edited files but did not run this command, your work is incomplete. The only exception is if validation found errors (then you MUST fix errors first) or the user explicitly asked you not to deploy.
+2. **Deploy** — Run `atk provision --env local --interactive false`. If you edited files but did not run this command, your work is incomplete. The only exception is if validation found errors (then you MUST fix errors first) or the user explicitly asked you not to deploy.
 
 If you are about to respond to the user and you have NOT run both commands above, **STOP and run them now**.
 
@@ -190,7 +190,7 @@ atk validate --env local
 
 **Action:** Provision required Azure resources and register the agent:
 ```bash
-atk provision --env local
+atk provision --env local --interactive false
 ```
 
 **Result:** Returns a test URL like `https://m365.cloud.microsoft/chat/?titleId=T_abc123xyz`
@@ -216,7 +216,7 @@ Then wait for the user's response.
 
 **Action:** Deploy to staging/production environments:
 ```bash
-atk provision --env prod
+atk provision --env prod --interactive false
 ```
 
 **Reference:** [deployment.md](deployment.md) for environment management and CI/CD patterns
@@ -226,7 +226,7 @@ atk provision --env prod
 **Action:** Package and share the agent:
 ```bash
 # Package the agent
-atk provision --env dev
+atk provision --env dev --interactive false
 
 # Share to tenant (for shared agents)
 atk share --scope tenant --env dev
@@ -243,7 +243,7 @@ atk share --scope tenant --env dev
 1. **Validate:** Run `atk validate --env local` once (validates the entire project).
    - If any file has **ERRORS** → **STOP. Fix all errors. Re-validate. DO NOT proceed to step 2.**
    - If only **warnings** → Proceed.
-2. Provision/deploy the agent: `atk provision --env local`
+2. Provision/deploy the agent: `atk provision --env local --interactive false`
 3. Confirm deployment succeeded and provide the test URL
 
 🚫 **NEVER run `atk provision` if ANY file has validation ERRORS.** This is a hard rule with no exceptions.
@@ -270,7 +270,7 @@ atk share --scope tenant --env dev
 
 - [ ] I ran `atk validate --env local` once after all edits
 - [ ] All validation passed with **no errors** (warnings are OK)
-- [ ] I ran `atk provision --env local` and it succeeded
+- [ ] I ran `atk provision --env local --interactive false` and it succeeded
 - [ ] I did NOT use any manual JSON parsing as a substitute for `atk validate --env local`
 
 **If you cannot check ALL four boxes, you are NOT done.** Go back and complete the missing steps.

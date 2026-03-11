@@ -21,7 +21,7 @@ After running `atk add action`, you **MUST** complete ALL of these before valida
 3. **Customize adaptive cards** in `appPackage/adaptiveCards/` for each operation — different layouts per HTTP verb (list view for GET collections, detail view for GET by ID, confirmation for DELETE, etc.)
 4. **Add `confirmation` dialogs** for all destructive operations (POST, PUT, PATCH, DELETE)
 5. **Validate** all touched files with `atk validate --env local`
-6. **Deploy** with `atk provision --env local`
+6. **Deploy** with `atk provision --env local --interactive false`
 
 Skipping ANY of these steps = incomplete work. The `atk add action` command generates scaffolding — **you must finish the job** by customizing every generated file.
 
@@ -1108,7 +1108,7 @@ Content-Type: application/json
 
 ```bash
 # Provision the agent
-atk provision --env local
+atk provision --env local --interactive false
 
 # Use the returned test URL to test in M365 Copilot
 ```
@@ -1181,8 +1181,22 @@ These different resolution strategies make manual path configuration nearly impo
 
 ---
 
+## Authentication for API Plugins
+
+The examples above use `"auth": {"type": "None"}` (unauthenticated APIs). If your API requires OAuth authentication, see [authentication.md](authentication.md) for:
+
+- Discovering OAuth endpoints from well-known metadata
+- Obtaining client credentials (via Dynamic Client Registration or manual entry)
+- Configuring the `oauth/register` lifecycle step in `m365agents.yml`
+- Using `OAuthPluginVault` in the plugin manifest runtime block
+
+The `oauth/register` step must be added to `m365agents.yml` before `teamsApp/zipAppPackage`. The resulting `<PREFIX>_MCP_AUTH_ID` environment variable is referenced in the plugin's runtime auth block.
+
+---
+
 ## Related Documentation
 
+- [Authentication Guide](authentication.md)
 - [Plugin Manifest Schema v2.4](https://raw.githubusercontent.com/MicrosoftDocs/m365copilot-docs/refs/heads/main/docs/plugin-manifest-2.4.md)
 - [OpenAPI Specification](https://www.openapis.org/what-is-openapi)
 - [Repairs API Example](https://repairshub.azurewebsites.net/openapi.json)

@@ -28,7 +28,7 @@ Complete workflow for provisioning a JSON-based agent to a development environme
 npm install
 
 # Provision agent to development environment (no compile step needed for JSON agents)
-atk provision --env local
+atk provision --env local --interactive false
 ```
 
 **Result:** Returns a test URL like `https://m365.cloud.microsoft/chat/?titleId=T_abc123xyz` to test the agent in Microsoft 365 Copilot.
@@ -43,7 +43,7 @@ Workflow for provisioning and sharing an agent with your organization:
 
 ```bash
 # Provision agent to target environment
-atk provision --env dev
+atk provision --env dev --interactive false
 
 # Share agent with tenant users
 atk share --scope tenant --env dev
