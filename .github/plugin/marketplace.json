@@ -27,6 +27,23 @@
         "./plugins/microsoft-365-agents-toolkit/skills/declarative-agent-developer",
         "./plugins/microsoft-365-agents-toolkit/skills/ui-widget-developer"
       ]
+    },
+    {
+      "name": "workiq-productivity",
+      "source": "./plugins/workiq-productivity",
+      "version": "1.0.0",
+      "description": "WorkIQ productivity skills powered by the local WorkIQ CLI — read-only insights across email, meetings, calendar, Teams, SharePoint, projects, and people.",
+      "skills": [
+        "./plugins/workiq-productivity/skills/action-item-extractor",
+        "./plugins/workiq-productivity/skills/daily-outlook-triage",
+        "./plugins/workiq-productivity/skills/email-analytics",
+        "./plugins/workiq-productivity/skills/meeting-cost-calculator",
+        "./plugins/workiq-productivity/skills/org-chart",
+        "./plugins/workiq-productivity/skills/multi-plan-search",
+        "./plugins/workiq-productivity/skills/site-explorer",
+        "./plugins/workiq-productivity/skills/channel-audit",
+        "./plugins/workiq-productivity/skills/channel-digest"
+      ]
     }
   ]
 }
