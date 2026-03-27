@@ -182,6 +182,17 @@ EXTRACT_TOOLS
           "type": "object",
           "properties": { ... },
           "required": [...]
+        },
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        },
+        "_meta": {
+          "ui": {
+            "resourceUri": "ui://namespace/view-name.html"
+          }
         }
       }
     ]
@@ -189,9 +200,13 @@ EXTRACT_TOOLS
 }
 ```
 
+> **⚠️ IMPORTANT:** The example above shows commonly seen fields (`annotations`, `execution`, `_meta`), but MCP servers may return **any** additional properties on tool objects. You **MUST** preserve every property returned by tools/list — copy each tool object in its entirety into `mcp_tool_description.tools[]`. Do NOT cherry-pick known fields; treat the tools/list output as the source of truth and inline it verbatim.
+
 #### 3c. Use All Discovered Tools
 
 **Include ALL tools** returned by `tools/list` in the plugin manifest. Do NOT filter or exclude tools unless the developer explicitly asks to limit the tool set.
+
+**Copy each tool object verbatim** — every property the server returns (`name`, `description`, `inputSchema`, `annotations`, `execution`, `_meta`, `outputSchema`, `title`, or any other field) must be preserved in `mcp_tool_description.tools[]`. Do NOT maintain a hardcoded list of "known" fields — the MCP protocol evolves and servers may return new properties at any time.
 
 Tell the user how many tools were discovered and confirm they will all be included.
 
@@ -240,8 +255,11 @@ For EACH discovered tool from Step 3, add a function entry with `name`, `descrip
 | `name` | `name` — copy EXACTLY, do not rename |
 | `description` | `description` — use the **full** description text, do NOT abbreviate or summarize |
 | `inputSchema` | Do NOT add to `functions[]` — this goes in `mcp_tool_description.tools[]` only |
+| **Any other property** (`annotations`, `execution`, `_meta`, `outputSchema`, `title`, or any future field) | Do NOT add to `functions[]` — this goes in `mcp_tool_description.tools[]` only |
 
-**Why this matters:** The model uses `description` from functions to decide when to invoke each tool. The runtime uses the full tool definitions from `mcp_tool_description.tools[]` (including `inputSchema`) to actually call the MCP server. Do not duplicate schema data in both places.
+> **🔑 Full-fidelity rule:** Every tool object in `mcp_tool_description.tools[]` must be a **verbatim copy** of the corresponding tool from the tools/list response. Copy the entire object as-is — do NOT strip, rename, reorder, or omit any property. The MCP protocol evolves and servers may return fields not listed above. If the server returns it, the plugin must include it.
+
+**Why this matters:** The model uses `description` from functions to decide when to invoke each tool. The runtime uses the full tool definitions from `mcp_tool_description.tools[]` to actually call the MCP server. These definitions include `inputSchema` (parameters), `annotations` (read-only/destructive hints), `execution` (task support behavior), `_meta` (UI widget resources), and potentially other properties. Stripping any of them breaks runtime behavior or loses capabilities. Do not duplicate schema data in both places — only `name` and `description` go into `functions[]`.
 
 ### Step 4b: Add Response Semantics
 
@@ -380,7 +398,10 @@ Add the `RemoteMCPServer` runtime with the tools inlined in `mcp_tool_descriptio
                 "type": "object",
                 "properties": { "..." : "..." },
                 "required": ["..."]
-              }
+              },
+              "annotations": { "readOnlyHint": true },
+              "execution": { "taskSupport": "forbidden" },
+              "_meta": { "ui": { "resourceUri": "ui://namespace/view.html" } }
             }
           ]
         }
@@ -416,7 +437,8 @@ Add the `RemoteMCPServer` runtime with the tools inlined in `mcp_tool_descriptio
 ```
 
 > **⚠️ IMPORTANT:**
-> - The `mcp_tool_description.tools` array must contain the **complete** tool definitions from the tools/list output (Step 3). Do NOT use a `file` reference — inline the tools directly.
+> - The `mcp_tool_description.tools` array must be a **verbatim copy** of the tools from the tools/list output (Step 3). Copy every property on each tool object exactly as returned — `inputSchema`, `annotations`, `execution`, `_meta`, and any other field the server includes. Do NOT strip, rename, or omit any property. Do NOT use a `file` reference — inline the tools directly.
+> - Do NOT fabricate properties that the server did not return. Only include what tools/list actually gives you.
 > - For authenticated servers, both `m365agents.yml` and `m365agents.local.yml` must include the `oauth/register` step — see [authentication.md](authentication.md).
 
 ### Step 7: Register Plugin in Agent Manifest
@@ -456,26 +478,61 @@ Add the plugin to your `declarative-agent.json`:
 
 ## Complete Example — Unauthenticated Server
 
-For the Microsoft Learn MCP server at `https://learn.microsoft.com/api/mcp`:
+For the Zava Insurance MCP server at `https://zava-insurance-mcp.azurewebsites.net/mcp`:
 
-### `appPackage/docs-plugin.json`
+### `appPackage/zava-plugin.json`
 
 ```json
 {
   "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
   "schema_version": "v2.4",
-  "name_for_human": "Microsoft Docs",
-  "description_for_human": "Search and fetch Microsoft Learn documentation",
-  "namespace": "msdocs",
+  "name_for_human": "Zava Insurance",
+  "description_for_human": "Manage insurance claims, inspections, contractors, and purchase orders",
+  "namespace": "zavainsurance",
   "functions": [
     {
-      "name": "microsoft_docs_search",
-      "description": "Search official Microsoft/Azure documentation to find the most relevant content for a user's query.",
-      "capabilities": { "response_semantics": { "data_path": "$.results", "properties": { "title": "$.title", "url": "$.url" }, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "[${title}](${url})", "wrap": true, "maxLines": 2 }] } } }
+      "name": "show-claims-dashboard",
+      "description": "Displays the Zava Insurance claims dashboard showing all claims with status overview, filters, and summary metrics. Supports filtering by status and/or policy holder name. When the user mentions a person's name, first name, last name, or partial name, always pass it as the policyHolderName parameter. The name filter is case-insensitive and supports partial matches.",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
     },
     {
-      "name": "microsoft_docs_fetch",
-      "description": "Fetch and convert a Microsoft Learn documentation page to markdown format.",
+      "name": "show-claim-detail",
+      "description": "Displays detailed information about a specific insurance claim including related inspections, purchase orders, and contractor assignments. Use claim ID (e.g. '1', '2') or claim number (e.g. 'CN202504990').",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "show-contractors",
+      "description": "Displays the list of contractors available for insurance repair work. Optionally filter by specialty or preferred status.",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "update-claim-status",
+      "description": "Updates the status of an insurance claim. Use claim ID (e.g. '1', '2').",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "update-inspection",
+      "description": "Updates an inspection record — status, findings, recommended actions, property, or inspector assignment.",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "update-purchase-order",
+      "description": "Updates a purchase order status (e.g. approve, reject, complete).",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "get-claim-summary",
+      "description": "Returns a text summary for a specific claim with key details. Use claim ID or claim number.",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "create-inspection",
+      "description": "Creates a new inspection record. Only claimNumber is required. ID is auto-generated, status defaults to 'open'. claimId is optional.",
+      "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
+    },
+    {
+      "name": "list-inspectors",
+      "description": "Lists all available inspectors with their specializations.",
       "capabilities": { "response_semantics": { "data_path": "$", "properties": {}, "static_template": { "type": "AdaptiveCard", "$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "version": "1.6", "body": [{ "type": "TextBlock", "text": "${if(title, title, description)}", "wrap": true }] } } }
     }
   ],
@@ -484,21 +541,91 @@ For the Microsoft Learn MCP server at `https://learn.microsoft.com/api/mcp`:
       "type": "RemoteMCPServer",
       "auth": { "type": "None" },
       "spec": {
-        "url": "https://learn.microsoft.com/api/mcp",
+        "url": "https://zava-insurance-mcp.azurewebsites.net/mcp",
         "mcp_tool_description": {
           "tools": [
-            { "name": "microsoft_docs_search", "description": "Search official Microsoft/Azure documentation to find the most relevant content for a user's query.", "inputSchema": { "type": "object", "properties": { "query": { "description": "A query or topic about Microsoft/Azure products", "type": "string" } } } },
-            { "name": "microsoft_docs_fetch", "description": "Fetch and convert a Microsoft Learn documentation page to markdown format.", "inputSchema": { "type": "object", "properties": { "url": { "description": "URL of the Microsoft documentation page to read", "type": "string" } }, "required": ["url"] } }
+            {
+              "name": "show-claims-dashboard",
+              "description": "Displays the Zava Insurance claims dashboard showing all claims with status overview, filters, and summary metrics. Supports filtering by status and/or policy holder name. When the user mentions a person's name, first name, last name, or partial name, always pass it as the policyHolderName parameter. The name filter is case-insensitive and supports partial matches.",
+              "inputSchema": { "type": "object", "properties": { "status": { "type": "string", "description": "Filter claims by status keyword (e.g. 'Open', 'Approved', 'Pending', 'Denied', 'Closed')" }, "policyHolderName": { "type": "string", "description": "Filter claims by policy holder name. Supports partial, case-insensitive matching." } }, "additionalProperties": false },
+              "annotations": { "readOnlyHint": true },
+              "execution": { "taskSupport": "forbidden" },
+              "_meta": { "ui": { "resourceUri": "ui://zava/claims-dashboard.html" } }
+            },
+            {
+              "name": "show-claim-detail",
+              "description": "Displays detailed information about a specific insurance claim including related inspections, purchase orders, and contractor assignments. Use claim ID (e.g. '1', '2') or claim number (e.g. 'CN202504990').",
+              "inputSchema": { "type": "object", "properties": { "claimId": { "type": "string", "description": "The claim ID or claim number to look up" } }, "required": ["claimId"], "additionalProperties": false },
+              "annotations": { "readOnlyHint": true },
+              "execution": { "taskSupport": "forbidden" },
+              "_meta": { "ui": { "resourceUri": "ui://zava/claim-detail.html" } }
+            },
+            {
+              "name": "show-contractors",
+              "description": "Displays the list of contractors available for insurance repair work. Optionally filter by specialty or preferred status.",
+              "inputSchema": { "type": "object", "properties": { "specialty": { "type": "string", "description": "Filter by contractor specialty (e.g. 'Roofing', 'Water Damage', 'Fire')" }, "preferredOnly": { "type": "boolean", "description": "Show only preferred contractors" } }, "additionalProperties": false },
+              "annotations": { "readOnlyHint": true },
+              "execution": { "taskSupport": "forbidden" },
+              "_meta": { "ui": { "resourceUri": "ui://zava/contractors-list.html" } }
+            },
+            {
+              "name": "update-claim-status",
+              "description": "Updates the status of an insurance claim. Use claim ID (e.g. '1', '2').",
+              "inputSchema": { "type": "object", "properties": { "claimId": { "type": "string", "description": "The claim ID" }, "status": { "type": "string", "description": "New status (e.g. 'Approved', 'Denied', 'Closed', 'Open - Under Investigation')" }, "note": { "type": "string", "description": "Optional note to add to the claim" } }, "required": ["claimId", "status"], "additionalProperties": false },
+              "execution": { "taskSupport": "forbidden" }
+            },
+            {
+              "name": "update-inspection",
+              "description": "Updates an inspection record — status, findings, recommended actions, property, or inspector assignment.",
+              "inputSchema": { "type": "object", "properties": { "inspectionId": { "type": "string", "description": "The inspection ID (e.g. 'insp-001')" }, "status": { "type": "string", "description": "New status (e.g. 'completed', 'scheduled', 'in-progress', 'cancelled')" }, "findings": { "type": "string", "description": "Updated findings text" }, "recommendedActions": { "type": "array", "items": { "type": "string" }, "description": "Updated recommended actions" }, "property": { "type": "string", "description": "Updated property address" }, "inspectorId": { "type": "string", "description": "Inspector ID to assign (e.g. 'inspector-003')" } }, "required": ["inspectionId"], "additionalProperties": false },
+              "execution": { "taskSupport": "forbidden" }
+            },
+            {
+              "name": "update-purchase-order",
+              "description": "Updates a purchase order status (e.g. approve, reject, complete).",
+              "inputSchema": { "type": "object", "properties": { "purchaseOrderId": { "type": "string", "description": "The purchase order ID (e.g. 'po-001')" }, "status": { "type": "string", "description": "New status (e.g. 'approved', 'rejected', 'completed', 'in-progress')" }, "note": { "type": "string", "description": "Optional note to add" } }, "required": ["purchaseOrderId", "status"], "additionalProperties": false },
+              "execution": { "taskSupport": "forbidden" }
+            },
+            {
+              "name": "get-claim-summary",
+              "description": "Returns a text summary for a specific claim with key details. Use claim ID or claim number.",
+              "inputSchema": { "type": "object", "properties": { "claimId": { "type": "string", "description": "Claim ID or claim number" } }, "required": ["claimId"], "additionalProperties": false },
+              "execution": { "taskSupport": "forbidden" }
+            },
+            {
+              "name": "create-inspection",
+              "description": "Creates a new inspection record. Only claimNumber is required. ID is auto-generated, status defaults to 'open'. claimId is optional.",
+              "inputSchema": { "type": "object", "properties": { "claimNumber": { "type": "string", "description": "The claim number (e.g. 'CN202504990')" }, "claimId": { "type": "string", "description": "Optional claim ID" }, "taskType": { "type": "string", "description": "Type of inspection: 'initial', 're-inspection', 'final'. Defaults to 'initial'" }, "priority": { "type": "string", "description": "Priority: 'low', 'medium', 'high'. Defaults to 'medium'" }, "status": { "type": "string", "description": "Status. Defaults to 'open'" }, "scheduledDate": { "type": "string", "description": "Scheduled date (ISO string)" }, "inspectorId": { "type": "string", "description": "Inspector ID to assign" }, "property": { "type": "string", "description": "Property address" }, "instructions": { "type": "string", "description": "Inspection instructions" } }, "required": ["claimNumber"], "additionalProperties": false },
+              "execution": { "taskSupport": "forbidden" }
+            },
+            {
+              "name": "list-inspectors",
+              "description": "Lists all available inspectors with their specializations.",
+              "inputSchema": { "type": "object", "properties": {} },
+              "execution": { "taskSupport": "forbidden" }
+            }
           ]
         }
       },
-      "run_for_functions": ["microsoft_docs_search", "microsoft_docs_fetch"]
+      "run_for_functions": [
+        "show-claims-dashboard",
+        "show-claim-detail",
+        "show-contractors",
+        "update-claim-status",
+        "update-inspection",
+        "update-purchase-order",
+        "get-claim-summary",
+        "create-inspection",
+        "list-inspectors"
+      ]
     }
   ]
 }
 ```
 
-Register in `declarative-agent.json`: `{ "actions": [{ "id": "docsPlugin", "file": "docs-plugin.json" }] }`
+> **Note how tools with UI widgets** (e.g., `show-claims-dashboard`, `show-claim-detail`, `show-contractors`) include `annotations`, `execution`, AND `_meta` with `resourceUri` — all copied verbatim from the tools/list response. Tools without UI (e.g., `update-claim-status`) still include `execution` when the server returned it, but omit `annotations` and `_meta` since the server didn't provide them.
+
+Register in `declarative-agent.json`: `{ "actions": [{ "id": "zavaPlugin", "file": "zava-plugin.json" }] }`
 
 ---
 
@@ -587,9 +714,9 @@ You can integrate multiple MCP servers by adding multiple runtimes, each with it
 ## Best Practices
 
 1. **Always discover tools via MCP protocol** — run the full handshake (initialize → notifications/initialized → tools/list) before writing the plugin manifest. **NEVER fabricate tool names or descriptions.**
-2. **Preserve ALL tool properties in `mcp_tool_description.tools`** — copy the full `description` and complete `inputSchema` for every tool; never abbreviate or omit fields. Do NOT duplicate `inputSchema` as `parameters` in `functions[]`.
+2. **Full-fidelity tool copying in `mcp_tool_description.tools`** — each tool object must be a verbatim copy of the tools/list output. Copy every property exactly as returned (`inputSchema`, `annotations`, `execution`, `_meta`, `outputSchema`, `title`, and any other field). The MCP protocol evolves — do NOT maintain a hardcoded allowlist of known fields. If the server returns it, the plugin must include it. Never abbreviate, omit, or rename properties. Do NOT duplicate `inputSchema` or other properties in `functions[]`.
 3. **Inline tools in `mcp_tool_description.tools`** — do NOT use a separate tools file; embed the tools array directly in the runtime spec
 4. **Match function names exactly** — copy tool names directly from the tools/list output
 5. **Always add response semantics** — every function must have `capabilities.response_semantics`, even if using the default (empty body) pattern
-6. **Include all tools by default** — inline every tool from `tools/list` unless the developer explicitly asks to limit the set; for all included tools always keep the full description and inputSchema
+6. **Include all tools by default** — inline every tool from `tools/list` unless the developer explicitly asks to limit the set; for all included tools always keep the complete tool object with all properties
 7. **Logos are optional** — ask the user if they want a custom logo; if not, use the defaults from `npx -y --package @microsoft/m365agentstoolkit-cli atk new`. Logos must be **PNG only** (no JPG, SVG, etc.)
