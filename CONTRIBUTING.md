@@ -91,6 +91,7 @@ Description and parameters...
 - [ ] `SKILL.md` with YAML frontmatter and documentation
 - [ ] Plugin registered in `.github/plugin/marketplace.json`
 - [ ] Root `README.md` updated with new plugin entry
+- [ ] `PLUGINS.md` updated with new plugin entry, skills, and examples
 
 ## Code of Conduct
 

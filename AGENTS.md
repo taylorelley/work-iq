@@ -16,6 +16,7 @@ work-iq/
 ├── server.json               # MCP server manifest
 ├── ADMIN-INSTRUCTIONS.md     # Tenant admin consent guide
 ├── CONTRIBUTING.md           # Guide for adding new plugins
+├── PLUGINS.md                # Plugin catalog — skills, agents, and commands
 └── AGENTS.md                 # This file
 ```
 
