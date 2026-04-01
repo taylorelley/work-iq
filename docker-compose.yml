@@ -8,7 +8,10 @@ services:
     stdin_open: true
     ports:
       - "3334:3334"
-    environment:
-      - WORKIQ_TENANT_ID=common
     volumes:
-      - ${HOME}/.mcp-auth:/home/workiq/.mcp-auth
+      # Named volume for portable token persistence.
+      # For host bind-mount instead: ${HOME}/.mcp-auth:/home/workiq/.mcp-auth
+      - mcp-auth:/home/workiq/.mcp-auth
+
+volumes:
+  mcp-auth:

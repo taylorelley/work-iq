@@ -171,13 +171,15 @@ Or with a specific tenant and token persistence:
       "run", "-i", "--rm",
       "-p", "3334:3334",
       "-e", "WORKIQ_TENANT_ID=your-tenant-id",
-      "-v", "~/.mcp-auth:/home/workiq/.mcp-auth",
+      "-v", "/path/to/your/.mcp-auth:/home/workiq/.mcp-auth",
       "workiq-mcp"
     ],
     "tools": ["*"]
   }
 }
 ```
+
+> **Note:** Replace `/path/to/your/.mcp-auth` with the absolute path to your `.mcp-auth` directory (e.g., `/home/username/.mcp-auth` on Linux or `C:\Users\username\.mcp-auth` on Windows). Tilde (`~`) is not expanded in JSON config files.
 
 ### Docker Compose
 
@@ -187,8 +189,16 @@ docker compose run --rm workiq
 
 ### Multi-platform builds
 
+Multi-platform images must be pushed to a registry (buildx cannot load multi-arch images locally):
+
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t workiq-mcp .
+docker buildx build --platform linux/amd64,linux/arm64 -t your-registry/workiq-mcp --push .
+```
+
+To build for a single platform and load locally:
+
+```bash
+docker buildx build --platform linux/amd64 -t workiq-mcp --load .
 ```
 
 ---

@@ -6,7 +6,6 @@ EULA/
 plugins/
 node_modules/
 *.md
-!docker-entrypoint.sh
 LICENSE
 NOTICES.TXT
 SECURITY.md
