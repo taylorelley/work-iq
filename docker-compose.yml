@@ -1,0 +1,14 @@
+services:
+  workiq:
+    build:
+      context: .
+      args:
+        WORKIQ_VERSION: "0.2.8"
+    image: workiq-mcp:latest
+    stdin_open: true
+    ports:
+      - "3334:3334"
+    environment:
+      - WORKIQ_TENANT_ID=common
+    volumes:
+      - ${HOME}/.mcp-auth:/home/workiq/.mcp-auth

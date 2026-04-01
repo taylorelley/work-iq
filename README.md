@@ -107,6 +107,92 @@ workiq version
 
 ---
 
+## 🐳 Docker
+
+Run WorkIQ as a self-contained Docker container — no Node.js installation required on the host.
+
+### Build the image
+
+```bash
+# Build with default version
+docker build -t workiq-mcp .
+
+# Build with a specific version
+docker build --build-arg WORKIQ_VERSION=0.2.8 -t workiq-mcp:0.2.8 .
+```
+
+### Run as an MCP server (stdio)
+
+```bash
+# Default tenant — maps OAuth callback port for browser auth
+docker run -i --rm -p 3334:3334 workiq-mcp
+
+# With a specific tenant
+docker run -i --rm -p 3334:3334 -e WORKIQ_TENANT_ID=your-tenant-id workiq-mcp
+```
+
+### Authentication
+
+The container uses **manual browser callback** for authentication:
+
+1. Start the container with `-p 3334:3334` to expose the OAuth callback port
+2. When authentication is required, the server outputs a URL
+3. Open the URL in your browser and sign in with your Microsoft account
+4. The browser redirects to `localhost:3334`, which reaches the container
+5. Authentication completes automatically
+
+To **persist tokens** across container restarts (so you don't re-authenticate every time), mount the token cache directory:
+
+```bash
+docker run -i --rm -p 3334:3334 -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
+```
+
+### Use with an MCP client
+
+Configure your MCP client to launch the container:
+
+```json
+{
+  "workiq": {
+    "command": "docker",
+    "args": ["run", "-i", "--rm", "-p", "3334:3334", "workiq-mcp"],
+    "tools": ["*"]
+  }
+}
+```
+
+Or with a specific tenant and token persistence:
+
+```json
+{
+  "workiq": {
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-p", "3334:3334",
+      "-e", "WORKIQ_TENANT_ID=your-tenant-id",
+      "-v", "~/.mcp-auth:/home/workiq/.mcp-auth",
+      "workiq-mcp"
+    ],
+    "tools": ["*"]
+  }
+}
+```
+
+### Docker Compose
+
+```bash
+docker compose run --rm workiq
+```
+
+### Multi-platform builds
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t workiq-mcp .
+```
+
+---
+
 ## 🎯 What You Can Query
 
 | Data Type | Example Questions |

@@ -13,6 +13,10 @@ work-iq/
 │   ├── workiq/
 │   ├── microsoft-365-agents-toolkit/
 │   └── workiq-productivity/
+├── Dockerfile                # Docker image for WorkIQ MCP server
+├── docker-entrypoint.sh      # Entrypoint script for Docker container
+├── docker-compose.yml        # Docker Compose for local development
+├── .dockerignore             # Docker build context exclusions
 ├── server.json               # MCP server manifest
 ├── ADMIN-INSTRUCTIONS.md     # Tenant admin consent guide
 ├── CONTRIBUTING.md           # Guide for adding new plugins

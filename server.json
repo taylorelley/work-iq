@@ -23,6 +23,21 @@
           "type": "positional"
         }
       ]
+    },
+    {
+      "registryType": "docker",
+      "identifier": "ghcr.io/microsoft/workiq-mcp",
+      "version": "0.2.8",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "WORKIQ_TENANT_ID",
+          "description": "The Entra tenant ID for authentication",
+          "default": "common"
+        }
+      ]
     }
   ]
 }
