@@ -13,8 +13,8 @@ set -e
 #   7. Script replays the URL inside the container against localhost:3334
 #   8. Tokens are cached in ~/.mcp-auth/ for future use
 
-# Allow callers to override the callback port via environment variable
-CALLBACK_PORT="${CALLBACK_PORT:-3334}"
+# Fixed callback port — workiq always listens on 3334; this is not configurable.
+CALLBACK_PORT=3334
 
 # Build the tenant-id flag if configured
 TENANT_FLAG=""
@@ -191,8 +191,7 @@ AUTH_EXIT=0
 while [ $AUTH_ELAPSED -lt $AUTH_TIMEOUT ]; do
   if ! kill -0 "$AUTH_PID" 2>/dev/null; then
     # Process exited — capture its exit status
-    wait "$AUTH_PID" 2>/dev/null
-    AUTH_EXIT=$?
+    wait "$AUTH_PID" 2>/dev/null && AUTH_EXIT=0 || AUTH_EXIT=$?
     break
   fi
   sleep 1
