@@ -149,7 +149,7 @@ docker run -i --rm -p 3334:3334 -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
 
 ### Headless Authentication
 
-If your host has **no browser** (e.g., a remote server or CI environment), use the built-in `auth` command to authenticate via a callback URL paste-back flow. No port mapping is needed — the callback is replayed inside the container.
+If your host has **no browser** (e.g., a remote server), use the built-in `auth` command to authenticate via an interactive callback URL paste-back flow. A human operator must open the sign-in URL and paste the callback URL back into the terminal, so this method is **not suitable for unattended CI pipelines** — use pre-provisioned tokens or service-principal credentials for automated environments. No port mapping is needed — the callback is replayed inside the container.
 
 ```bash
 # One-time interactive authentication (requires -it for terminal input)

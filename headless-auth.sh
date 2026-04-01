@@ -13,7 +13,8 @@ set -e
 #   7. Script replays the URL inside the container against localhost:3334
 #   8. Tokens are cached in ~/.mcp-auth/ for future use
 
-CALLBACK_PORT=3334
+# Allow callers to override the callback port via environment variable
+CALLBACK_PORT="${CALLBACK_PORT:-3334}"
 
 # Build the tenant-id flag if configured
 TENANT_FLAG=""
@@ -35,6 +36,9 @@ echo "============================================"
 echo ""
 echo "Starting WorkIQ to trigger authentication..."
 echo ""
+
+# Snapshot the current token state so we can detect new/updated files later
+TOKEN_STATE_BEFORE=$(ls -lR "$HOME/.mcp-auth" 2>/dev/null || true)
 
 # Create a temp file for capturing workiq output
 AUTH_OUTPUT=$(mktemp)
@@ -175,13 +179,51 @@ node -e "
   req.end();
 " "$CALLBACK_URL"
 
-# Wait briefly for workiq to process the token exchange
+# Wait for the background workiq process to finish the token exchange.
+# Use a timeout so we don't hang indefinitely.
 echo ""
 echo "Waiting for token exchange to complete..."
-sleep 3
 
-# Check if tokens were created
-if [ -d "$HOME/.mcp-auth" ] && [ "$(ls -A "$HOME/.mcp-auth" 2>/dev/null)" ]; then
+AUTH_TIMEOUT=30
+AUTH_ELAPSED=0
+AUTH_EXIT=0
+
+while [ $AUTH_ELAPSED -lt $AUTH_TIMEOUT ]; do
+  if ! kill -0 "$AUTH_PID" 2>/dev/null; then
+    # Process exited — capture its exit status
+    wait "$AUTH_PID" 2>/dev/null
+    AUTH_EXIT=$?
+    break
+  fi
+  sleep 1
+  AUTH_ELAPSED=$((AUTH_ELAPSED + 1))
+done
+
+# If the process is still running after the timeout, terminate it
+if kill -0 "$AUTH_PID" 2>/dev/null; then
+  echo "WorkIQ did not exit within ${AUTH_TIMEOUT}s — terminating."
+  kill "$AUTH_PID" 2>/dev/null || true
+  wait "$AUTH_PID" 2>/dev/null || true
+  AUTH_EXIT=1
+fi
+
+# Clear PID so the cleanup trap doesn't try to kill an already-waited process
+AUTH_PID=""
+
+# Determine success by checking the process exit status and whether
+# new or updated token files appeared since the script started.
+if [ "$AUTH_EXIT" -ne 0 ]; then
+  echo ""
+  echo "Authentication failed (exit status $AUTH_EXIT)."
+  echo ""
+  echo "WorkIQ output:"
+  cat "$AUTH_OUTPUT"
+  exit 1
+fi
+
+# Compare token state to the pre-auth snapshot
+TOKEN_STATE_AFTER=$(ls -lR "$HOME/.mcp-auth" 2>/dev/null || true)
+if [ "$TOKEN_STATE_AFTER" != "$TOKEN_STATE_BEFORE" ]; then
   echo ""
   echo "============================================"
   echo "  Authentication successful!"
@@ -194,12 +236,11 @@ if [ -d "$HOME/.mcp-auth" ] && [ "$(ls -A "$HOME/.mcp-auth" 2>/dev/null)" ]; the
   echo ""
 else
   echo ""
-  echo "Warning: No tokens found in ~/.mcp-auth/ after authentication."
-  echo "The token exchange may still be in progress, or authentication may have failed."
-  echo "Check the WorkIQ output above for errors."
-fi
-
-# Clean up the background workiq process
-if kill -0 "$AUTH_PID" 2>/dev/null; then
-  kill "$AUTH_PID" 2>/dev/null || true
+  echo "Warning: No new tokens found in ~/.mcp-auth/ after authentication."
+  echo "The token files were unchanged. Authentication may have failed or"
+  echo "the existing cached tokens were already valid."
+  echo ""
+  echo "WorkIQ output:"
+  cat "$AUTH_OUTPUT"
+  exit 1
 fi
