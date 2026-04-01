@@ -147,6 +147,35 @@ To **persist tokens** across container restarts (so you don't re-authenticate ev
 docker run -i --rm -p 3334:3334 -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
 ```
 
+### Headless Authentication
+
+If your host has **no browser** (e.g., a remote server or CI environment), use the built-in `auth` command to authenticate via a callback URL paste-back flow. No port mapping is needed — the callback is replayed inside the container.
+
+```bash
+# One-time interactive authentication (requires -it for terminal input)
+docker run -it --rm -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp auth
+
+# Or with Docker Compose
+docker compose run --rm headless-auth
+```
+
+The `auth` command will:
+
+1. Start WorkIQ and trigger the Microsoft OAuth flow
+2. Display a sign-in URL — open it on **any device** with a browser (phone, laptop, etc.)
+3. After signing in, the browser redirects to `localhost:3334` and shows an error or blank page — this is expected
+4. Copy the **full URL** from the browser's address bar (it contains the authorization code)
+5. Paste it into the container terminal
+6. The script delivers the callback locally, completing authentication
+
+Tokens are cached in `~/.mcp-auth/`. Once authenticated, run the MCP server normally without a browser:
+
+```bash
+docker run -i --rm -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
+```
+
+> **Note:** Microsoft OAuth refresh tokens expire periodically (typically 90 days). Re-run the `auth` command when tokens expire.
+
 ### Use with an MCP client
 
 Configure your MCP client to launch the container:

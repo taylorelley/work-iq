@@ -23,9 +23,10 @@ VOLUME /home/workiq/.mcp-auth
 # OAuth callback port for manual browser authentication
 EXPOSE 3334
 
-# Copy entrypoint
+# Copy entrypoint and headless auth helper
 COPY --chown=workiq:workiq docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY --chown=workiq:workiq headless-auth.sh /usr/local/bin/headless-auth.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/headless-auth.sh
 
 USER workiq
 WORKDIR /home/workiq
