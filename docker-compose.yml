@@ -13,5 +13,19 @@ services:
       # For host bind-mount instead: ${HOME}/.mcp-auth:/home/workiq/.mcp-auth
       - mcp-auth:/home/workiq/.mcp-auth
 
+  # One-time headless authentication (no browser required on host).
+  # Usage: docker compose run --rm headless-auth
+  headless-auth:
+    build:
+      context: .
+      args:
+        WORKIQ_VERSION: "0.2.8"
+    image: workiq-mcp:latest
+    stdin_open: true
+    tty: true
+    command: ["auth"]
+    volumes:
+      - mcp-auth:/home/workiq/.mcp-auth
+
 volumes:
   mcp-auth:

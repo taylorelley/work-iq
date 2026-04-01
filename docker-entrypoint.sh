@@ -1,6 +1,12 @@
 #!/bin/sh
 set -e
 
+# Handle the "auth" subcommand for headless environments
+if [ "$1" = "auth" ]; then
+  shift
+  exec headless-auth.sh "$@"
+fi
+
 # Prepend --tenant-id if configured, then default to "mcp" subcommand
 if [ -n "$WORKIQ_TENANT_ID" ] && [ "$WORKIQ_TENANT_ID" != "common" ]; then
   if [ $# -eq 0 ]; then
