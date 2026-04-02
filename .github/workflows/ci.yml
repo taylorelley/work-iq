@@ -69,7 +69,7 @@ jobs:
               sources.append(src)
               skills = p.get('skills', [])
               # Emit a bash array for each plugin's skills
-              safe_src = src.replace('./', '').replace('/', '_')
+              safe_src = src.replace('./', '').replace('/', '_').replace('-', '_')
               print(f'SKILLS_{safe_src}=({\" \".join(shlex.quote(s) for s in skills)})')
           print(f'PLUGINS=({\" \".join(shlex.quote(s) for s in sources)})')
           ")"
@@ -92,6 +92,7 @@ jobs:
             # Get the skill paths array for this plugin
             safe_src="${plugin_dir#./}"
             safe_src="${safe_src//\//_}"
+            safe_src="${safe_src//-/_}"
             eval "skill_paths=(\"\${SKILLS_${safe_src}[@]}\")"
 
             if [ ${#skill_paths[@]} -eq 0 ]; then
