@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-shell:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: shellcheck docker-entrypoint.sh headless-auth.sh
+
+  validate-json:
+    name: Validate JSON files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON
+        run: |
+          set -e
+          failed=0
+          for f in server.json .github/plugin/marketplace.json; do
+            echo "Validating $f"
+            python3 -m json.tool "$f" > /dev/null || failed=1
+          done
+          find plugins -name ".mcp.json" | while read -r f; do
+            echo "Validating $f"
+            python3 -m json.tool "$f" > /dev/null || failed=1
+          done
+          exit $failed
+
+  lint-dockerfile:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.0.0
+        with:
+          dockerfile: Dockerfile
+
+  validate-plugins:
+    name: Validate plugin structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check plugin structure
+        run: |
+          set -e
+          failed=0
+
+          # Extract plugin source paths from marketplace.json
+          PLUGINS=$(python3 -c "
+          import json
+          with open('.github/plugin/marketplace.json') as f:
+              data = json.load(f)
+          for p in data['plugins']:
+              print(p['source'])
+          ")
+
+          for plugin_dir in $PLUGINS; do
+            name=$(basename "$plugin_dir")
+            echo "--- Checking plugin: $name ---"
+
+            if [ ! -d "$plugin_dir" ]; then
+              echo "ERROR: Plugin directory $plugin_dir does not exist"
+              failed=1
+              continue
+            fi
+
+            if [ ! -f "$plugin_dir/README.md" ]; then
+              echo "ERROR: $plugin_dir/README.md is missing"
+              failed=1
+            fi
+
+            # Check for at least one SKILL.md
+            skill_count=$(find "$plugin_dir/skills" -name "SKILL.md" 2>/dev/null | wc -l)
+            if [ "$skill_count" -eq 0 ]; then
+              echo "ERROR: No SKILL.md files found in $plugin_dir/skills/"
+              failed=1
+            fi
+
+            # Validate SKILL.md frontmatter has name and description
+            find "$plugin_dir/skills" -name "SKILL.md" 2>/dev/null | while read -r skill; do
+              # Extract YAML frontmatter (between --- delimiters)
+              frontmatter=$(sed -n '/^---$/,/^---$/p' "$skill" | head -20)
+              if ! echo "$frontmatter" | grep -q "^name:"; then
+                echo "ERROR: $skill missing 'name' in YAML frontmatter"
+                exit 1
+              fi
+              if ! echo "$frontmatter" | grep -q "^description:"; then
+                echo "ERROR: $skill missing 'description' in YAML frontmatter"
+                exit 1
+              fi
+            done || failed=1
+
+            echo "OK: $name"
+          done
+
+          exit $failed
+
+  docker-build:
+    name: Build and test Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: workiq-mcp:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify workiq is installed
+        run: docker run --rm workiq-mcp:test workiq --version
+      - name: Verify entrypoint help
+        run: docker run --rm workiq-mcp:test workiq --help
