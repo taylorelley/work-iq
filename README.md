@@ -1,155 +1,125 @@
-# Microsoft Work IQ — Plugin Marketplace
+# Work IQ Docker
 
-> The official Microsoft Work IQ plugin collection for GitHub Copilot ✨
+> Run [Microsoft Work IQ](https://github.com/microsoft/work-iq) as a self-contained Docker container — no Node.js installation required on the host.
 
-Extend the power of GitHub Copilot with Work IQ plugins — MCP servers, skills, and tools that connect AI assistants to your Microsoft 365 data.
+Work IQ is an MCP (Model Context Protocol) server that connects AI assistants to your Microsoft 365 data. This fork packages it into a Docker image so you can build, run, and integrate it entirely through Docker.
 
-> ⚠️ **Public Preview:** Features and APIs may change.
-
-To access Microsoft 365 tenant data, the WorkIQ CLI and MCP Server need to be consented to permissions that require administrative rights on the tenant. On first access, a consent dialog appears. If you are not an administrator, contact your tenant administrator to grant access.
-
-**For Tenant Administrators:** See the [Tenant Administrator Enablement Guide](./ADMIN-INSTRUCTIONS.md) for detailed instructions on granting admin consent, including a quick one-click consent URL.
-
-For more information, see Microsoft's [User and Admin Consent Overview](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/user-admin-consent-overview).
-
-## 📋 Prerequisites
-
-Before getting started, ensure you have **Node.js** (which includes NPM and NPX) installed:
-
-- **Node.js 18+** — [Download from nodejs.org](https://nodejs.org/)
-
-You can verify your installation by running:
-
-```bash
-node --version
-npm --version
-```
-
-> 💡 **Why Node.js?** WorkIQ uses NPX to run the MCP server. NPX is included automatically with NPM, which comes bundled with Node.js.
+> **Public Preview:** Features and APIs may change.
 
 ---
 
-## 🚀 Quick Start with GitHub Copilot CLI
+## What is Work IQ?
+
+Work IQ lets you query Microsoft 365 using natural language through any MCP-compatible client:
+
+| Data Type | Example Questions |
+|-----------|-------------------|
+| **Emails** | "What did John say about the proposal?" |
+| **Meetings** | "What's on my calendar tomorrow?" |
+| **Documents** | "Find my recent PowerPoint presentations" |
+| **Teams** | "Summarize today's messages in the Engineering channel" |
+| **People** | "Who is working on Project Alpha?" |
+
+It uses the Microsoft 365 Copilot Chat API as its backend and requires delegated permissions granted by a tenant administrator.
+
+---
+
+## Prerequisites
+
+- **Docker** (or Docker Desktop) — [Install Docker](https://docs.docker.com/get-docker/)
+- **Microsoft 365 Copilot license** for each user
+- **Tenant admin consent** — see the [Tenant Administrator Enablement Guide](./ADMIN-INSTRUCTIONS.md)
+
+No Node.js, npm, or other runtime is needed on the host.
+
+---
+
+## Quick Start
 
 ```bash
-# 1. Open GitHub Copilot CLI
-copilot
+# Build the image
+docker build -t workiq-mcp .
 
-# 2. Add this plugin marketplace (one-time setup)
-/plugin marketplace add microsoft/work-iq
-
-# 3. Install any plugin
-/plugin install workiq@work-iq
-/plugin install microsoft-365-agents-toolkit@work-iq
-/plugin install workiq-productivity@work-iq
-```
-
-**That's it!** Restart Copilot CLI and start using the plugin:
-
-```
-You: What are my upcoming meetings this week?
-You: Summarize emails from Sarah about the budget
-You: Find documents I worked on yesterday
+# Run the MCP server (maps OAuth callback port for browser auth)
+docker run -i --rm -p 3334:3334 workiq-mcp
 ```
 
 ---
 
-## 📦 Alternative: Standalone MCP Installation
+## Building the Image
 
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=workiq&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40microsoft%2Fworkiq%22%2C%22mcp%22%5D%7D)
-[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=workiq&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40microsoft%2Fworkiq%22%2C%22mcp%22%5D%7D&quality=insiders)
-
-If you prefer to run WorkIQ as a standalone MCP server:
+The Dockerfile installs `@microsoft/workiq` globally inside a `node:22-slim` base image and runs as a non-root `workiq` user.
 
 ```bash
-# Install globally
-npm install -g @microsoft/workiq
-
-# Run the MCP server
-workiq mcp
-```
-
-Or use npx without installing:
-
-```bash
-npx -y @microsoft/workiq mcp
-```
-
-Or add it as an MCP server in your coding agent or IDE:
-
-```json
-{
-  "workiq": {
-    "command": "npx",
-    "args": ["-y", "@microsoft/workiq@latest", "mcp"],
-    "tools": ["*"]
-  }
-}
-```
-
-> Note: please refer to [use MCP servers in VS Code](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) for the configuration instructions relative to Visual Studio Code.
-
-### Updating
-
-If you installed WorkIQ globally with npm, run the following command to update to the latest version:
-
-```bash
-npm update -g @microsoft/workiq
-```
-
-To verify the installed version after updating:
-
-```bash
-workiq version
-```
-
-> 💡 **Using npx?** If you run WorkIQ via `npx -y @microsoft/workiq mcp`, npx automatically fetches the latest version each time, so no manual update step is needed.
-
----
-
-## 🐳 Docker
-
-Run WorkIQ as a self-contained Docker container — no Node.js installation required on the host.
-
-### Build the image
-
-```bash
-# Build with default version
+# Build with the default version (0.2.8)
 docker build -t workiq-mcp .
 
 # Build with a specific version
 docker build --build-arg WORKIQ_VERSION=0.2.8 -t workiq-mcp:0.2.8 .
 ```
 
-### Run as an MCP server (stdio)
+### Multi-platform builds
+
+Build for multiple architectures with `buildx`. Multi-platform images must be pushed to a registry (buildx cannot load multi-arch images locally):
 
 ```bash
-# Default tenant — maps OAuth callback port for browser auth
-docker run -i --rm -p 3334:3334 workiq-mcp
-
-# With a specific tenant
-docker run -i --rm -p 3334:3334 -e WORKIQ_TENANT_ID=your-tenant-id workiq-mcp
+docker buildx build --platform linux/amd64,linux/arm64 -t your-registry/workiq-mcp --push .
 ```
 
-### Authentication
+To build for a single platform and load locally:
 
-The container uses **manual browser callback** for authentication:
+```bash
+docker buildx build --platform linux/amd64 -t workiq-mcp --load .
+```
+
+---
+
+## Running the MCP Server
+
+The container starts the WorkIQ MCP server in stdio mode by default.
+
+```bash
+# Default tenant
+docker run -i --rm -p 3334:3334 workiq-mcp
+
+# With a specific Entra tenant
+docker run -i --rm -p 3334:3334 -e WORKIQ_TENANT_ID=your-tenant-id workiq-mcp
+
+# With token persistence (avoids re-authenticating on every run)
+docker run -i --rm -p 3334:3334 -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
+```
+
+The entrypoint (`docker-entrypoint.sh`) defaults to `workiq mcp`. If `WORKIQ_TENANT_ID` is set to something other than `common`, it automatically prepends `--tenant-id`. You can override the command entirely:
+
+```bash
+docker run -i --rm workiq-mcp workiq ask -q "What meetings do I have today?"
+```
+
+---
+
+## Authentication
+
+Work IQ uses Microsoft OAuth for authentication. The container listens on port **3334** for the OAuth callback.
+
+### Browser-based authentication
+
+Use this when your host machine has a browser available.
 
 1. Start the container with `-p 3334:3334` to expose the OAuth callback port
-2. When authentication is required, the server outputs a URL
+2. When authentication is required, the server outputs a sign-in URL
 3. Open the URL in your browser and sign in with your Microsoft account
 4. The browser redirects to `localhost:3334`, which reaches the container
 5. Authentication completes automatically
 
-To **persist tokens** across container restarts (so you don't re-authenticate every time), mount the token cache directory:
+To **persist tokens** across container restarts, mount the token cache directory:
 
 ```bash
 docker run -i --rm -p 3334:3334 -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
 ```
 
-### Headless Authentication
+### Headless authentication
 
-If your host has **no browser** (e.g., a remote server), use the built-in `auth` command to authenticate via an interactive callback URL paste-back flow. A human operator must open the sign-in URL and paste the callback URL back into the terminal, so this method is **not suitable for unattended CI pipelines** — use pre-provisioned tokens or service-principal credentials for automated environments. No port mapping is needed — the callback is replayed inside the container.
+Use this when your host has **no browser** (e.g. a remote server or VM). The built-in `auth` command runs an interactive paste-back flow — no port mapping is needed.
 
 ```bash
 # One-time interactive authentication (requires -it for terminal input)
@@ -163,7 +133,7 @@ The `auth` command will:
 
 1. Start WorkIQ and trigger the Microsoft OAuth flow
 2. Display a sign-in URL — open it on **any device** with a browser (phone, laptop, etc.)
-3. After signing in, the browser redirects to `localhost:3334` and shows an error or blank page — this is expected
+3. After signing in, the browser redirects to `localhost:3334` and shows an error or blank page — **this is expected**
 4. Copy the **full URL** from the browser's address bar (it contains the authorization code)
 5. Paste it into the container terminal
 6. The script delivers the callback locally, completing authentication
@@ -174,11 +144,15 @@ Tokens are cached in `~/.mcp-auth/`. Once authenticated, run the MCP server norm
 docker run -i --rm -v ~/.mcp-auth:/home/workiq/.mcp-auth workiq-mcp
 ```
 
+> **Note:** This method requires a human operator and is **not suitable for unattended CI pipelines**. Use pre-provisioned tokens or service-principal credentials for automated environments.
+
 > **Note:** Microsoft OAuth refresh tokens expire periodically (typically 90 days). Re-run the `auth` command when tokens expire.
 
-### Use with an MCP client
+---
 
-Configure your MCP client to launch the container:
+## Using with MCP Clients
+
+Configure your MCP client (VS Code, Claude Code, etc.) to launch the container as a server:
 
 ```json
 {
@@ -190,7 +164,7 @@ Configure your MCP client to launch the container:
 }
 ```
 
-Or with a specific tenant and token persistence:
+With a specific tenant and token persistence:
 
 ```json
 {
@@ -208,121 +182,81 @@ Or with a specific tenant and token persistence:
 }
 ```
 
-> **Note:** Replace `/path/to/your/.mcp-auth` with the absolute path to your `.mcp-auth` directory (e.g., `/home/username/.mcp-auth` on Linux or `C:\Users\username\.mcp-auth` on Windows). Tilde (`~`) is not expanded in JSON config files.
+> **Note:** Replace `/path/to/your/.mcp-auth` with the absolute path to your `.mcp-auth` directory (e.g. `/home/username/.mcp-auth` on Linux or `C:\Users\username\.mcp-auth` on Windows). Tilde (`~`) is not expanded in JSON config files.
 
-### Docker Compose
+---
+
+## Docker Compose
+
+The included `docker-compose.yml` defines two services:
+
+| Service | Purpose |
+|---------|---------|
+| `workiq` | Main MCP server with OAuth port mapping and token persistence |
+| `headless-auth` | One-time interactive authentication for headless environments |
 
 ```bash
+# Run the MCP server
 docker compose run --rm workiq
+
+# Authenticate (headless, one-time)
+docker compose run --rm headless-auth
 ```
 
-### Multi-platform builds
+Both services share a named volume (`mcp-auth`) for token persistence. To use a host bind-mount instead, edit `docker-compose.yml` and replace the named volume with:
 
-Multi-platform images must be pushed to a registry (buildx cannot load multi-arch images locally):
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t your-registry/workiq-mcp --push .
-```
-
-To build for a single platform and load locally:
-
-```bash
-docker buildx build --platform linux/amd64 -t workiq-mcp --load .
+```yaml
+volumes:
+  - ${HOME}/.mcp-auth:/home/workiq/.mcp-auth
 ```
 
 ---
 
-## 🎯 What You Can Query
+## Environment Variables
 
-| Data Type | Example Questions |
-|-----------|-------------------|
-| **Emails** | "What did John say about the proposal?" |
-| **Meetings** | "What's on my calendar tomorrow?" |
-| **Documents** | "Find my recent PowerPoint presentations" |
-| **Teams** | "Summarize today's messages in the Engineering channel" |
-| **People** | "Who is working on Project Alpha?" |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WORKIQ_TENANT_ID` | Microsoft Entra tenant ID for authentication | `common` |
 
----
+### Build Arguments
 
-## 📖 CLI Reference
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `workiq accept-eula` | Accept the End User License Agreement (EULA) |
-| `workiq ask` | Ask a question to a specific agent or run in interactive mode |
-| `workiq mcp` | Start MCP stdio server for agent communication |
-| `workiq version` | Show version information |
-
-### Global Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-t, --tenant-id <tenant-id>` | The Entra tenant ID to use for authentication | `common` |
-| `--version` | Show version information | |
-| `-?, -h, --help` | Show help and usage information | |
-
-### `workiq ask` Options
-
-| Option | Description |
-|--------|-------------|
-| `-q, --question <question>` | The question to ask the agent |
-
-### Examples
-
-```bash
-# Accept the EULA (required on first use)
-workiq accept-eula
-
-# Interactive mode
-workiq ask
-
-# Ask a specific question
-workiq ask -q "What meetings do I have tomorrow?"
-
-# Use a specific tenant
-workiq ask -t "your-tenant-id" -q "Show my emails"
-
-# Start MCP server
-workiq mcp
-```
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `WORKIQ_VERSION` | Version of `@microsoft/workiq` to install | `0.2.8` |
 
 ---
 
-## 🔌 Available Plugins
+## Image Details
 
-| Plugin | Description |
-|--------|-------------|
-| [**workiq**](./plugins/workiq/) | Query Microsoft 365 data with natural language — emails, meetings, documents, Teams messages, and more. |
-| [**microsoft-365-agents-toolkit**](./plugins/microsoft-365-agents-toolkit/) | Toolkit for building M365 Copilot declarative agents — scaffolding, manifest authoring, and capability configuration. |
-| [**workiq-productivity**](./plugins/workiq-productivity/) | Read-only WorkIQ productivity insights — email triage, meeting costs, org charts, channel audits, and more. |
-
-> 📖 **See [PLUGINS.md](./PLUGINS.md)** for the full plugin catalog with detailed skill listings, example prompts, MCP server info, and installation instructions.
-
----
-
-## Platform Support
-
-The WorkIQ CLI and MCP Server are supported on `win_x64`, `win_arm64`, `linux_x64`, `linux_arm64`, `osx_x64` and `osx_arm64`.
+| Property | Value |
+|----------|-------|
+| Base image | `node:22-slim` |
+| Runs as | Non-root `workiq` user |
+| Exposed port | `3334` (OAuth callback) |
+| Token cache | `/home/workiq/.mcp-auth` (volume mount point) |
+| Entrypoint | `docker-entrypoint.sh` |
+| Default command | `workiq mcp` |
 
 ---
 
-## 🤝 Contributing
+## Tenant Administrator Setup
 
-We welcome new plugins! See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full guide. In short:
+To access Microsoft 365 tenant data, a tenant administrator must grant consent to the Work IQ application. See the [Tenant Administrator Enablement Guide](./ADMIN-INSTRUCTIONS.md) for detailed instructions, including a one-click consent URL.
 
-1. Create your plugin under `plugins/{your-plugin}/`
-2. Add `.mcp.json`, `README.md`, and `skills/{name}/SKILL.md`
-3. Register it in `.github/plugin/marketplace.json`
-4. Submit a pull request
+For more information, see Microsoft's [User and Admin Consent Overview](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/user-admin-consent-overview).
 
 ---
 
-## 📄 License
+## Upstream
+
+This project is a fork of [microsoft/work-iq](https://github.com/microsoft/work-iq). For plugin documentation, skill listings, and the Copilot CLI plugin marketplace, see the upstream repository.
+
+---
+
+## License
 
 By using this package, you accept the license agreement. See [NOTICES.TXT](./NOTICES.TXT) and EULA within the package for legal terms.
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft’s Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos is subject to those third-party's policies.
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos is subject to those third-party's policies.
