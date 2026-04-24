@@ -9,6 +9,11 @@ LABEL org.opencontainers.image.title="WorkIQ MCP Server" \
       org.opencontainers.image.source="https://github.com/microsoft/work-iq-mcp" \
       org.opencontainers.image.version="${WORKIQ_VERSION}"
 
+# Install libicu (required by the .NET runtime used by the WorkIQ binary)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libicu-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install the WorkIQ package globally
 RUN npm install -g @microsoft/workiq@${WORKIQ_VERSION} && \
     npm cache clean --force
